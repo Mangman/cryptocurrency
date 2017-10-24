@@ -300,8 +300,69 @@ impl Api for CryptocurrencyApi {
             }
         };
 
+        let self_ = self.clone();
+        let say_hello_to_admin = move |req: &mut Request| -> IronResult<Response> {
+            match req.get::<bodyparser::Struct<TransactionRequest>>() {
+                Ok(Some(transaction)) => {
+                    let transaction: Box<Transaction> = transaction.into();
+                    //self_.channel.send(transaction).map_err(ApiError::Events)?;
+
+                    let admin_key: PublicKey = PublicKey::new(
+                        [
+                            0x03,
+                            0xe6,
+                            0x57,
+                            0xae,
+                            0x71,
+                            0xe5,
+                            0x1b,
+                            0xe6,
+                            0x0a,
+                            0x45,
+                            0xb4,
+                            0xbd,
+                            0x20,
+                            0xbc,
+                            0xf7,
+                            0x9f,
+                            0xf5,
+                            0x2f,
+                            0x0c,
+                            0x03,
+                            0x7a,
+                            0xe6,
+                            0xda,
+                            0x05,
+                            0x40,
+                            0xa0,
+                            0xe0,
+                            0x06,
+                            0x61,
+                            0x32,
+                            0xb4,
+                            0x72
+                        ],
+                    );
+
+                    if transaction.verify_signature(&admin_key) {
+                        let line = "hello";
+                        self_.ok_response(&serde_json::to_value(&line).unwrap())
+                    }
+                    else {
+                        let line = "u r not admin";
+                        self_.ok_response(&serde_json::to_value(&line).unwrap())
+                    }
+                }
+                Ok(None) => Err(ApiError::IncorrectRequest("Empty request body".into()))?,
+                Err(e) => Err(ApiError::IncorrectRequest(Box::new(e)))?,
+            }
+        };
+
         // Bind the transaction handler to a specific route.
         router.post("/v1/wallets/transaction", transaction, "transaction");
+
+        router.post("/v1/sayhello", say_hello_to_admin, "says \'hello\'");
+
         router.get("/v1/wallets", wallets_info, "wallets_info");
         router.get("/v1/wallet/:pub_key", wallet_info, "wallet_info");
     }
