@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Import crates with necessary types into a new project.
-
+#[macro_use] extern crate hyper;
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
@@ -31,12 +31,20 @@ use exonum::blockchain::{self, Blockchain, Service, GenesisConfig, ValidatorKeys
 use exonum::node::{Node, NodeConfig, NodeApiConfig, TransactionSend, ApiSender, NodeChannel};
 use exonum::messages::{RawTransaction, FromRaw, Message};
 use exonum::storage::{Fork, MemoryDB, MapIndex};
-use exonum::crypto::{PublicKey, Hash, HexValue};
+use exonum::crypto::{PublicKey, Hash, HexValue, Signature, verify};
 use exonum::encoding;
 use exonum::api::{Api, ApiError};
 use iron::prelude::*;
 use iron::Handler;
+use iron::headers::{HeaderView, Host};
 use router::Router;
+
+
+header! { (XAuth, "X-Auth") => [String] }
+
+
+// mod XAuth_header;
+// use XAuth_header::XAuth;
 
 // // // // // // // // // // CONSTANTS // // // // // // // // // //
 
@@ -301,7 +309,7 @@ impl Api for CryptocurrencyApi {
         };
 
         let self_ = self.clone();
-        let say_hello_to_admin = move |req: &mut Request| -> IronResult<Response> {
+        let post_say_hello_to_admin = move |req: &mut Request| -> IronResult<Response> {
             match req.get::<bodyparser::Struct<TransactionRequest>>() {
                 Ok(Some(transaction)) => {
                     let transaction: Box<Transaction> = transaction.into();
@@ -358,10 +366,66 @@ impl Api for CryptocurrencyApi {
             }
         };
 
+        let self_ = self.clone();
+
+        let aws_say_hello_to_admin = move |req: &mut Request| -> IronResult<Response> {
+            // let headers = req.headers.iter().filter(|h: &HeaderView| -> bool {
+            //     h.name() != "X-auth"
+            // });
+
+            let admin_key: PublicKey = PublicKey::new(
+                        [
+                            0x03,
+                            0xe6,
+                            0x57,
+                            0xae,
+                            0x71,
+                            0xe5,
+                            0x1b,
+                            0xe6,
+                            0x0a,
+                            0x45,
+                            0xb4,
+                            0xbd,
+                            0x20,
+                            0xbc,
+                            0xf7,
+                            0x9f,
+                            0xf5,
+                            0x2f,
+                            0x0c,
+                            0x03,
+                            0x7a,
+                            0xe6,
+                            0xda,
+                            0x05,
+                            0x40,
+                            0xa0,
+                            0xe0,
+                            0x06,
+                            0x61,
+                            0x32,
+                            0xb4,
+                            0x72
+                        ],
+                    );
+
+            let data = req.headers.get::<XAuth>().unwrap();
+
+            let signature = Signature::zero();
+
+            //let result = verify(&signature, data, &admin_key);
+
+
+            self_.ok_response(&serde_json::to_value("lol").unwrap())
+        };
+
         // Bind the transaction handler to a specific route.
         router.post("/v1/wallets/transaction", transaction, "transaction");
 
-        router.post("/v1/sayhello", say_hello_to_admin, "says \'hello\'");
+        router.post("/v1/sayhello/post", post_say_hello_to_admin, "says \'hello\'");
+
+        router.get("/v1/say_hello/aws", aws_say_hello_to_admin, "says \'hello\'");
 
         router.get("/v1/wallets", wallets_info, "wallets_info");
         router.get("/v1/wallet/:pub_key", wallet_info, "wallet_info");

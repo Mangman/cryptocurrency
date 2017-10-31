@@ -9,6 +9,7 @@ license = "Apache-2.0"
 [dependencies]
 exonum = "0.2.0"
 iron = "0.5.1"
+hyper = "0.11.6"
 bodyparser = "0.7.0"
 router = "0.5.1"
 serde = "1.0"
